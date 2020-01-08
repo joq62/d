@@ -4,8 +4,8 @@
 %%%  
 %%% Created : 10 dec 2012
 %%% -------------------------------------------------------------------
--module(adder_service). 
-
+-module(divi_service). 
+ 
 -behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% Include files
@@ -26,7 +26,7 @@
 
 
 
--export([add/2
+-export([divi/2
 	]).
 
 -export([start/0,
@@ -60,8 +60,8 @@ stop()-> gen_server:call(?MODULE, {stop},infinity).
 ping()->
     gen_server:call(?MODULE, {ping},infinity).
 
-add(A,B)->
-    gen_server:call(?MODULE, {add,A,B},infinity).
+divi(A,B)->
+    gen_server:call(?MODULE, {divi,A,B},infinity).
 get_state()->
     gen_server:call(?MODULE, {get_state},infinity).    
 
@@ -105,8 +105,8 @@ handle_call({get_state}, _From, State) ->
      Reply=State,
     {reply, Reply, State};
 
-handle_call({add,A,B}, _From, State) ->
-     Reply=rpc:call(node(),adder,add,[A,B]),
+handle_call({divi,A,B}, _From, State) ->
+     Reply=A/B,
     {reply, Reply, State};
 
 

@@ -1,41 +1,69 @@
 %%% -------------------------------------------------------------------
 %%% Author  : Joq Erlang
-%%% Description : test application calc
-%%%  
+%%% Description :pod_service
+%%% Controls containers (erlang applications) and provides log service 
+%%% 
+%%% Key Datastructures
+%%% Computer: {"localhost",ComputerPort}
+%%% application:set_env(computer_service,[{pod_ip_address_port,{PodAddress,PodPort},
+%%%                                       {dns_port,DnsPort}])),
+%%% 
+%%% ListofContainers=[{ServiceId,Vsn}]
+%%%
+%%% load_start(ServiceId,Vsn)->ok|{error,[Error,,,]}
+%%% stop_unload(ServiceId,Vsn)-> ok|{error,[Error,,,]}
+%%% getAllContainers()->[{ServiceId,Vsn},,,]
+%%% 
+%%%    
 %%% Created : 10 dec 2012
 %%% -------------------------------------------------------------------
--module(adder_service). 
+-module(pod_service). 
 
 -behaviour(gen_server).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--include("common_macros.hrl").
-%% --------------------------------------------------------------------
 
+%% --------------------------------------------------------------------
+ 
 %% --------------------------------------------------------------------
 %% Key Data structures
 %% 
 %% --------------------------------------------------------------------
--record(state,{myip,dns_address,dns_socket}).
+-record(state,{computer_ip_address_port,
+	       pod_ip_address_port,
+	       dns_ip_address_port,
+	       container_list
+	      }).
 
-%% Definitions 
 
+	  
 %% --------------------------------------------------------------------
 
+%% ====================================================================
+%% External functions
+%% ====================================================================
+%%% load_start(ServiceId)->ok|{error,[Error,,,]}
+%%% stop_unload(ServiceId)-> ok|{error,[Error,,,]}
+%%% load_start(ServiceId,Vsn)->ok|{error,[Error,,,]}
+%%% stop_unload(ServiceId,Vsn)-> ok|{error,[Error,,,]}
+%%% getAllContainers()->[{ServiceId,Vsn},,,]
+%%% 
 
+-export([ping/0]).
 
+-export([load_start/1,stop_unload/1,
+	 get_all_containers/0
+	 
+	]).
 
--export([add/2
+-export([
 	]).
 
 -export([start/0,
-	 stop/0,
-	 ping/0,
-	 get_state/0,
-	 heart_beat/1
-	]).
-
+	 stop/0
+	 ]).
+ 
 %% gen_server callbacks
 -export([init/1, handle_call/3,handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
@@ -46,29 +74,25 @@
 
 %% Asynchrounus Signals
 
-
-
-%% Gen server functions
+%% Gen server function
 
 start()-> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 stop()-> gen_server:call(?MODULE, {stop},infinity).
 
 
+%%----------------------------------------------------------------------
+load_start(ServiceId)->
+    gen_server:call(?MODULE,{load_start,ServiceId},infinity).
+stop_unload(ServiceId)->
+    gen_server:call(?MODULE,{stop_unload,ServiceId},infinity).
 
-%%-----------------------------------------------------------------------
+get_all_containers()->
+    gen_server:call(?MODULE,{get_all_containers},infinity).
 
 ping()->
-    gen_server:call(?MODULE, {ping},infinity).
+    gen_server:call(?MODULE,{ping},infinity).
 
-add(A,B)->
-    gen_server:call(?MODULE, {add,A,B},infinity).
-get_state()->
-    gen_server:call(?MODULE, {get_state},infinity).    
-
-
-%%-----------------------------------------------------------------------
-heart_beat(Interval)->
-    gen_server:cast(?MODULE, {heart_beat,Interval}).
+%%------------------ cast ---------------------------------------------
 
 
 %% ====================================================================
@@ -85,8 +109,15 @@ heart_beat(Interval)->
 %
 %% --------------------------------------------------------------------
 init([]) ->
-    {ok,{DnsIpAddr,DnsPort}}=application:get_env(dns_ip_address_port),
-    {ok, #state{dns_address={DnsIpAddr,DnsPort}}}.
+    {ok,{ComputerAddress,ComputerPort}}=application:get_env(computer_ip_address_port),
+    {ok,{PodAddress,PodPort}}=application:get_env(pod_ip_address_port),
+    {ok,{DnsAddress,DnsPort}}=application:get_env(dns_ip_address_port),
+    
+    {ok, #state{computer_ip_address_port={ComputerAddress,ComputerPort},
+		pod_ip_address_port={PodAddress,PodPort},
+		dns_ip_address_port={DnsAddress,DnsPort},
+	        container_list=[]}}.
+
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
 %% Description: Handling call messages
@@ -97,25 +128,57 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (aterminate/2 is called)
 %% --------------------------------------------------------------------
+handle_call({load_start,ServiceId}, _From, State) ->
+    Reply=case lists:keymember(ServiceId,1,State#state.container_list) of
+	      true->
+		  NewState=State,
+		  {error,[already_started,ServiceId,?MODULE,?LINE]};
+	      false->
+		  case lib_pod:start(ServiceId,State#state.dns_ip_address_port) of
+		      {ok,ServiceId}->
+			  NewContainerList=[{ServiceId,State#state.computer_ip_address_port}
+					    |State#state.container_list],
+			  NewState=State#state{container_list=NewContainerList},
+			  ok;
+		      {error,Err} ->
+			  NewState=State,
+			  {error,Err}
+		  end
+	  end,
+									  
+    {reply, Reply, NewState};
+handle_call({stop_unload,ServiceId}, _From, State) ->
+    Reply=case lists:keymember(ServiceId,1,State#state.container_list) of
+	      false->
+		  NewState=State,
+		  {error,[not_loaded,ServiceId,?MODULE,?LINE]};
+	      true->
+		  case lib_pod:stop(ServiceId) of
+		      ok->
+			  NewContainerList=lists:keydelete(ServiceId,1,State#state.container_list),
+			  NewState=State#state{container_list=NewContainerList},
+			  ok;
+		      {error,Err} ->
+			  NewState=State,
+			  {error,Err}
+		  end
+	  end,
+    {reply, Reply, NewState};
+
+handle_call({get_all_containers}, _From, State) ->
+     Reply=State#state.container_list,
+    {reply, Reply, State};
+
+%%----------------------------------------------------------------------
 handle_call({ping}, _From, State) ->
-     Reply={pong,node(),?MODULE},
+    Reply={pong,node(),?MODULE},
     {reply, Reply, State};
-
-handle_call({get_state}, _From, State) ->
-     Reply=State,
-    {reply, Reply, State};
-
-handle_call({add,A,B}, _From, State) ->
-     Reply=rpc:call(node(),adder,add,[A,B]),
-    {reply, Reply, State};
-
 
 handle_call({stop}, _From, State) ->
-    tcp_client:disconnect(State#state.dns_socket),
     {stop, normal, shutdown_ok, State};
 
 handle_call(Request, From, State) ->
-    Reply = {unmatched_signal,?MODULE,Request,From},
+    Reply = {unmatched_signal,?MODULE,?LINE,Request,From},
     {reply, Reply, State}.
 
 %% --------------------------------------------------------------------
@@ -125,12 +188,6 @@ handle_call(Request, From, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_cast({heart_beat,Interval}, State) ->
-    {MyIpAddr,MyPort}=State#state.myip,
-    tcp_client:cast(State#state.dns_socket,{dns_service,add,[atom_to_list(?MODULE),MyIpAddr,MyPort,node()]}),
-    
-    spawn(fun()->h_beat(Interval) end),      
-    {noreply, State};
 
 handle_cast(Msg, State) ->
     io:format("unmatched match cast ~p~n",[{?MODULE,?LINE,Msg}]),
@@ -142,7 +199,7 @@ handle_cast(Msg, State) ->
 %% Returns: {noreply, State}          |
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
-%% --------------------------------------------------------------------
+
 handle_info(Info, State) ->
     io:format("unmatched match info ~p~n",[{?MODULE,?LINE,Info}]),
     {noreply, State}.
@@ -172,17 +229,11 @@ code_change(_OldVsn, State, _Extra) ->
 %% Description:
 %% Returns: non
 %% --------------------------------------------------------------------
-h_beat(Interval)->
-    timer:sleep(Interval),
-    rpc:cast(node(),?MODULE,heart_beat,[Interval]).
 
 %% --------------------------------------------------------------------
 %% Internal functions
 %% --------------------------------------------------------------------
 
 %% --------------------------------------------------------------------
-%% Function: 
-%% Description:
-%% Returns: non
+%% Internal functions
 %% --------------------------------------------------------------------
-

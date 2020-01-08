@@ -10,7 +10,7 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--include("common_macros.hrl").
+
 %% --------------------------------------------------------------------
 
 %% --------------------------------------------------------------------
@@ -20,7 +20,8 @@
 -record(state,{myip,dns_address,dns_socket}).
 
 %% Definitions 
-
+-define(HB_INTERVAL,1*20*1000).
+-define(NODE_CONFIG,"node.config").
 %% --------------------------------------------------------------------
 
 
@@ -32,7 +33,6 @@
 -export([start/0,
 	 stop/0,
 	 ping/0,
-	 get_state/0,
 	 heart_beat/1
 	]).
 
@@ -56,14 +56,11 @@ stop()-> gen_server:call(?MODULE, {stop},infinity).
 
 
 %%-----------------------------------------------------------------------
-
 ping()->
     gen_server:call(?MODULE, {ping},infinity).
 
 add(A,B)->
     gen_server:call(?MODULE, {add,A,B},infinity).
-get_state()->
-    gen_server:call(?MODULE, {get_state},infinity).    
 
 
 %%-----------------------------------------------------------------------
@@ -85,8 +82,21 @@ heart_beat(Interval)->
 %
 %% --------------------------------------------------------------------
 init([]) ->
-    {ok,{DnsIpAddr,DnsPort}}=application:get_env(dns_ip_address_port),
-    {ok, #state{dns_address={DnsIpAddr,DnsPort}}}.
+    % Update Dns
+    Start=case lib_service:dns_address() of
+	      {error,Err}->
+		  {error, #state{myip=Err}};
+	      {DnsIpAddr,DnsPort}->
+		  {MyIpAddr,MyPort}=lib_service:myip(),
+		  {ok,Socket}=tcp_client:connect(DnsIpAddr,DnsPort),
+		  tcp_client:cast(Socket,{dns_service,add,[atom_to_list(?MODULE),MyIpAddr,MyPort,node()]}),
+		  spawn(fun()->h_beat(?HB_INTERVAL) end),  
+		  {ok, #state{myip={MyIpAddr,MyPort},dns_address={DnsIpAddr,DnsPort},
+			     dns_socket=Socket}}
+
+	  end,   
+    Start.
+    
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
 %% Description: Handling call messages
@@ -99,10 +109,6 @@ init([]) ->
 %% --------------------------------------------------------------------
 handle_call({ping}, _From, State) ->
      Reply={pong,node(),?MODULE},
-    {reply, Reply, State};
-
-handle_call({get_state}, _From, State) ->
-     Reply=State,
     {reply, Reply, State};
 
 handle_call({add,A,B}, _From, State) ->

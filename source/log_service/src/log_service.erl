@@ -120,19 +120,11 @@ heart_beat(Interval)->
 %% --------------------------------------------------------------------
 init([]) ->
        % Initiated the app
-    {ok,[{MyIpAddr,MyPort},
-	 {DnsIpAddr,DnsPort},
-	 Socket
-	]}=misc_lib:app_start(?MODULE),
-    %% Add service specific init 
-        % init logfile 
+    {ok,{DnsIpAddr,DnsPort}}=application:get_env(dns_ip_address_port),
+
     ok=log:init_logfile(),	
-    
-% spawn(fun()->do_poll(?POLL_INTERVAL) end),
-    
-    {ok, #state{myip={MyIpAddr,MyPort},
-		dns_address={DnsIpAddr,DnsPort},
-		dns_socket=Socket}}. 
+       
+    {ok, #state{dns_address={DnsIpAddr,DnsPort}}}.
     
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
