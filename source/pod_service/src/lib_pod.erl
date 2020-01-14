@@ -17,8 +17,8 @@
 
 %% External exports
 
--export([start/2,stop/1,
-	 create/2,delete/1]).
+-export([start/4,stop/1,
+	 create/4,delete/1]).
 
 
 %% ====================================================================
@@ -29,8 +29,8 @@
 %% Description:
 %% Returns: non
 %% --------------------------------------------------------------------
-start(ServiceId,{DnsIpAddr,DnsPort})->
-    create(ServiceId,[{dns_ip_address_port,{DnsIpAddr,DnsPort}}]).
+start(ServiceId,Type,Source,{DnsIpAddr,DnsPort})->
+    create(ServiceId,Type,Source,[{dns_ip_address_port,{DnsIpAddr,DnsPort}}]).
 
 stop(ServiceId)->
     delete(ServiceId).
@@ -78,15 +78,15 @@ delete(ServiceId)->
 %%
 %%
 %% --------------------------------------------------------------------
-create(ServiceId,EnvList)->
+create(ServiceId,Type,Source,EnvList)->
     Result =case filelib:is_dir(ServiceId) of
 		true->
 		    {error,[service_already_loaded,ServiceId,?MODULE,?LINE]};
 		false ->
-		    case get_extract(ServiceId) of
+		    case load_code(ServiceId,Type,Source) of
 			{error,Err}->
 		    {error,Err};
-			glurk ->
+			ok ->
 			    case compile(ServiceId) of
 				{error,Err}->
 				    {error,Err};
@@ -111,11 +111,22 @@ create(ServiceId,EnvList)->
 %% Description:
 %% Returns: ok|{erro,compile_info}|{error,nodedown}
 %% --------------------------------------------------------------------
-get_extract(ServiceId)->
-    
-    os:cmd("cp -r "++?SOURCE_PATH++"/"++ServiceId++" ."),
-    % ok=extract tar file
-    glurk.
+load_code(ServiceId,github,UrlToSource)->
+    UrlToService=filename:join(ServiceId,UrlToSource),
+    os:cmd("git clone "++UrlToService),
+    ok;
+
+load_code(ServiceId,dir,Path)->
+    PathToService=filename:join(Path,ServiceId),
+    Result=case filelib:is_dir(PathToService) of
+	       true->
+		   os:cmd("cp -r "++PathToService++" ."),
+		   ok;
+	       false->
+		   {error,['dir eexist',ServiceId,?MODULE,?LINE]}
+	   end,
+	       
+    Result.
 
 %% --------------------------------------------------------------------
 %% Function:clone_compile(Service,BoardNode)

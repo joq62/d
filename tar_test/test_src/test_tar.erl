@@ -59,7 +59,7 @@
   %  ExtractDir="/home/pi/erlang/c/tar_test/c/tar_test/extract_dir",
 
 start()->
-    SourceDir="/home/pi/erlang/c/source/adder_service",
+    SourceDir="/home/pi/erlang/d/source",
     TarDir=".",
     BaseName=filename:basename(SourceDir),
     CR=create(SourceDir,TarDir),
