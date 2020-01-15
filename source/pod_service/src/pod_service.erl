@@ -6,7 +6,8 @@
 %%% Key Datastructures
 %%% Computer: {"localhost",ComputerPort}
 %%% application:set_env(computer_service,[{pod_ip_address_port,{PodAddress,PodPort},
-%%%                                       {dns_port,DnsPort}])),
+%%%                                       {dns_port,DnsPort},
+%%%                                       {source,Type,Source}])),
 %%% 
 %%% ListofContainers=[{ServiceId,Vsn}]
 %%%
@@ -33,6 +34,7 @@
 -record(state,{computer_ip_address_port,
 	       pod_ip_address_port,
 	       dns_ip_address_port,
+	       source,
 	       container_list
 	      }).
 
@@ -47,22 +49,22 @@
 %%% stop_unload(ServiceId)-> ok|{error,[Error,,,]}
 %%% load_start(ServiceId,Vsn)->ok|{error,[Error,,,]}
 %%% stop_unload(ServiceId,Vsn)-> ok|{error,[Error,,,]}
-%%% getAllContainers()->[{ServiceId,Vsn},,,]
+%%% getAllServices()->[{ServiceId,Vsn},,,]
 %%% 
 
 -export([ping/0]).
 
 -export([load_start/1,stop_unload/1,
-	 get_all_containers/0
+	 get_all_services/0
 	 
 	]).
 
 -export([
 	]).
 
--export([start/0,
+-export([start/1,
 	 stop/0
-	 ]).
+	 ]). 
  
 %% gen_server callbacks
 -export([init/1, handle_call/3,handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -76,7 +78,9 @@
 
 %% Gen server function
 
-start()-> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+start(Args)->
+   %  glurk=Args,
+    gen_server:start_link({local, ?MODULE}, ?MODULE, Args, []).
 stop()-> gen_server:call(?MODULE, {stop},infinity).
 
 
@@ -86,8 +90,8 @@ load_start(ServiceId)->
 stop_unload(ServiceId)->
     gen_server:call(?MODULE,{stop_unload,ServiceId},infinity).
 
-get_all_containers()->
-    gen_server:call(?MODULE,{get_all_containers},infinity).
+get_all_services()->
+    gen_server:call(?MODULE,{get_all_services},infinity).
 
 ping()->
     gen_server:call(?MODULE,{ping},infinity).
@@ -108,15 +112,14 @@ ping()->
 %%          {stop, Reason}
 %
 %% --------------------------------------------------------------------
-init([]) ->
-    {ok,{ComputerAddress,ComputerPort}}=application:get_env(computer_ip_address_port),
-    {ok,{PodAddress,PodPort}}=application:get_env(pod_ip_address_port),
-    {ok,{DnsAddress,DnsPort}}=application:get_env(dns_ip_address_port),
-    
+init([{ComputerAddress,ComputerPort},{PodAddress,PodPort},
+      {DnsAddress,DnsPort},{Type,Source}]) ->
+
     {ok, #state{computer_ip_address_port={ComputerAddress,ComputerPort},
 		pod_ip_address_port={PodAddress,PodPort},
 		dns_ip_address_port={DnsAddress,DnsPort},
-	        container_list=[]}}.
+		source={Type,Source},
+		container_list=[]}}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_call/3

@@ -44,7 +44,14 @@
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 start(_Type, _StartArgs) ->
-    {ok,Pid}= pod_service_sup:start(),
+    {ok,{ComputerAddress,ComputerPort}}=application:get_env(computer_ip_address_port),
+    {ok,{PodAddress,PodPort}}=application:get_env(pod_ip_address_port),
+    {ok,{DnsAddress,DnsPort}}=application:get_env(dns_ip_address_port),
+    {ok,{Type,Source}}=application:get_env(source),
+    Args=[{ComputerAddress,ComputerPort},{PodAddress,PodPort},
+	  {DnsAddress,DnsPort},{Type,Source}],
+
+    {ok,Pid}= pod_service_sup:start(Args),
     {ok,Pid}.
 %% --------------------------------------------------------------------
 %% Func: stop/1

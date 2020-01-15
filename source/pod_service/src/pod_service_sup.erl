@@ -14,7 +14,7 @@
 %% --------------------------------------------------------------------
 %% External exports
 %% --------------------------------------------------------------------
--export([start/0]).
+-export([start/1]).
 
 %% --------------------------------------------------------------------
 %% Internal exports
@@ -28,7 +28,7 @@
 %% --------------------------------------------------------------------
 -define(SERVER, ?MODULE).
 %% Helper macro for declaring children of supervisor
--define(CHILD(I, Type), {I, {I, start, []}, permanent, 5000, Type, [I]}).
+-define(CHILD(I, Type,Args), {I, {I, start,[Args]}, permanent, 5000, Type, [I]}).
 %% --------------------------------------------------------------------
 %% Records
 %% --------------------------------------------------------------------
@@ -37,8 +37,9 @@
 %% External functions
 %% ====================================================================
 
-start()->
-   supervisor:start_link({local,?MODULE}, ?MODULE,[]).
+start(Args)->
+  
+   supervisor:start_link({local,?MODULE}, ?MODULE,Args).
 
 %% ====================================================================
 %% Server functions
@@ -49,9 +50,10 @@ start()->
 %%          ignore                          |
 %%          {error, Reason}
 %% --------------------------------------------------------------------
-init([]) ->
+init(Args) ->
+%    glurk=Args,
     {ok,{{one_for_one,5,10}, 
-	 [?CHILD(pod_service,worker)
+	 [?CHILD(pod_service,worker,Args)
 	 ]}}.
 
 %% ====================================================================

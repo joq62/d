@@ -27,7 +27,11 @@
 init_test()->
     ok=application:set_env([{pod_service,[{computer_ip_address_port,{"localhost",40000}},
 					  {pod_ip_address_port,{"podIpAddr",50000}},
-					  {dns_ip_address_port,{"localhost",50000}}]}]),
+					  {dns_ip_address_port,{"localhost",50000}},
+					  {source,{dir,"/home/pi/erlang/d/source"}}
+					 ]
+			    }
+			   ]),
     ok=application:start(pod_service),
     ok=pod_service:load_start("log_service"),
     [{"log_service",{"localhost",40000}}]=pod_service:get_all_containers(),
