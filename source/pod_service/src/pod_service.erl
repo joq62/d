@@ -35,7 +35,7 @@
 	       pod_ip_address_port,
 	       dns_ip_address_port,
 	       source,
-	       container_list
+	       service_list
 	      }).
 
 
@@ -119,7 +119,7 @@ init([{ComputerAddress,ComputerPort},{PodAddress,PodPort},
 		pod_ip_address_port={PodAddress,PodPort},
 		dns_ip_address_port={DnsAddress,DnsPort},
 		source={Type,Source},
-		container_list=[]}}.
+		service_list=[]}}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
@@ -132,16 +132,17 @@ init([{ComputerAddress,ComputerPort},{PodAddress,PodPort},
 %%          {stop, Reason, State}            (aterminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call({load_start,ServiceId}, _From, State) ->
-    Reply=case lists:keymember(ServiceId,1,State#state.container_list) of
+    Reply=case lists:keymember(ServiceId,1,State#state.service_list) of
 	      true->
 		  NewState=State,
 		  {error,[already_started,ServiceId,?MODULE,?LINE]};
 	      false->
-		  case lib_pod:start(ServiceId,State#state.dns_ip_address_port) of
+		  {Type,Source}=State#state.source,
+		  case lib_pod:start(ServiceId,Type,Source,State#state.dns_ip_address_port) of
 		      {ok,ServiceId}->
-			  NewContainerList=[{ServiceId,State#state.computer_ip_address_port}
-					    |State#state.container_list],
-			  NewState=State#state{container_list=NewContainerList},
+			  NewServiceList=[{ServiceId,State#state.computer_ip_address_port}
+					    |State#state.service_list],
+			  NewState=State#state{service_list=NewServiceList},
 			  ok;
 		      {error,Err} ->
 			  NewState=State,
@@ -151,15 +152,15 @@ handle_call({load_start,ServiceId}, _From, State) ->
 									  
     {reply, Reply, NewState};
 handle_call({stop_unload,ServiceId}, _From, State) ->
-    Reply=case lists:keymember(ServiceId,1,State#state.container_list) of
+    Reply=case lists:keymember(ServiceId,1,State#state.service_list) of
 	      false->
 		  NewState=State,
 		  {error,[not_loaded,ServiceId,?MODULE,?LINE]};
 	      true->
 		  case lib_pod:stop(ServiceId) of
 		      ok->
-			  NewContainerList=lists:keydelete(ServiceId,1,State#state.container_list),
-			  NewState=State#state{container_list=NewContainerList},
+			  NewServiceList=lists:keydelete(ServiceId,1,State#state.service_list),
+			  NewState=State#state{service_list=NewServiceList},
 			  ok;
 		      {error,Err} ->
 			  NewState=State,
@@ -168,8 +169,8 @@ handle_call({stop_unload,ServiceId}, _From, State) ->
 	  end,
     {reply, Reply, NewState};
 
-handle_call({get_all_containers}, _From, State) ->
-     Reply=State#state.container_list,
+handle_call({get_all_services}, _From, State) ->
+     Reply=State#state.service_list,
     {reply, Reply, State};
 
 %%----------------------------------------------------------------------

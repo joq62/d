@@ -112,7 +112,8 @@ create(ServiceId,Type,Source,EnvList)->
 %% Returns: ok|{erro,compile_info}|{error,nodedown}
 %% --------------------------------------------------------------------
 load_code(ServiceId,github,UrlToSource)->
-    UrlToService=filename:join(ServiceId,UrlToSource),
+    FileName=ServiceId++".git",
+    UrlToService=UrlToSource++"/"++FileName,
     os:cmd("git clone "++UrlToService),
     ok;
 
