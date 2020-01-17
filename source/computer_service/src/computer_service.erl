@@ -29,8 +29,6 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--define(NODES_CONFIG,"nodes.config").
--define(POLL_INTERVAL,1*1000).
 
 %% --------------------------------------------------------------------
  
@@ -72,7 +70,7 @@
 	 get_service_addresses/1
 	]).
 
--export([start/0,
+-export([start/1,
 	 stop/0
 	 ]).
  
@@ -88,7 +86,7 @@
 
 %% Gen server function
 
-start()-> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+start(Args)-> gen_server:start_link({local, ?MODULE}, ?MODULE, Args, []).
 stop()-> gen_server:call(?MODULE, {stop},infinity).
 
 

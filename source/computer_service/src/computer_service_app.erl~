@@ -1,7 +1,7 @@
 %% Author: uabjle
 %% Created: 10 dec 2012
 %% Description: TODO: Add description to application_org
--module(iaas_service_app).
+-module(computer_service_app).
  
 -behaviour(application).
 %% --------------------------------------------------------------------
@@ -44,7 +44,14 @@
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 start(_Type, _StartArgs) ->
-    {ok,Pid}= iaas_service_sup:start(),
+    {ok,{ComputerAddress,ComputerPort}}=application:get_env(computer_ip_address_port),
+    {ok,{DnsAddress,DnsPort}}=application:get_env(dns_ip_address_port),
+    Args=[{ComputerAddress,ComputerPort},
+	  {DnsAddress,DnsPort}],
+
+    {ok,Pid}= pod_service_sup:start(Args),
+    {ok,Pid}.
+    {ok,Pid}= computer_service_sup:start(),
     {ok,Pid}.
 %% --------------------------------------------------------------------
 %% Func: stop/1

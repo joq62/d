@@ -79,7 +79,6 @@
 %% Gen server function
 
 start(Args)->
-   %  glurk=Args,
     gen_server:start_link({local, ?MODULE}, ?MODULE, Args, []).
 stop()-> gen_server:call(?MODULE, {stop},infinity).
 
