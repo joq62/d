@@ -4,7 +4,7 @@
 %%%
 %%% Created : 10 dec 2012
 %%% -------------------------------------------------------------------
--module(lib_pod). 
+-module(lib_computer). 
  
 %% --------------------------------------------------------------------
 %% Include files
@@ -17,13 +17,33 @@
 
 %% External exports
 
--export([start/4,stop/1,
+-export([create_pod/2,
+	       
 	 create/4,delete/1]).
 
 
 %% ====================================================================
 %% External functions
 %% ====================================================================
+
+%% --------------------------------------------------------------------
+%% Function:init 
+%% Description:
+%% Returns: non
+%% --------------------------------------------------------------------
+create_vm_list(ComputerAddress,MinPort,MaxPort)->
+    %% Port is the erlang node ID
+
+create_vm(VmId,Port)->
+    % Create a vm directory to load services 
+    % Load tcp_services and start tcp_server to listen on port Port
+    % Load pod service 
+    % Load and start a service 
+    
+    
+
+
+
 %% --------------------------------------------------------------------
 %% Function:init 
 %% Description:
@@ -92,7 +112,7 @@ create(ServiceId,Type,Source,EnvList)->
 				    {error,Err};
 				ok ->
 				    %timer:sleep(10000),
-				    case start_app(ServiceId,ServiceDir,EnvList) of
+				    case start_app(ServiceId,EnvList) of
 					{error,Err}->
 					    {error,Err};
 					ok->
@@ -179,8 +199,8 @@ compile(ServiceId)->
 %% Description:
 %% Returns: ok|{erro,compile_info}|{error,nodedown}
 %% --------------------------------------------------------------------
-start_app(ServiceId,ServiceDir,EnvList)->
-    PathServiceEbin=filename:join([ServiceDir,"ebin"]),
+start_app(ServiceId,EnvList)->
+    PathServiceEbin=filename:join([ServiceId,"ebin"]),
     Result = case rpc:call(node(),code,add_path,[PathServiceEbin],5000) of
 		 true->
 		     Service=list_to_atom(ServiceId),

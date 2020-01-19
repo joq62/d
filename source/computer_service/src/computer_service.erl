@@ -6,14 +6,15 @@
 %%% Key Datastructures
 %%% ComputerPort: computer_service listen port
 %%% application:set_env(computer_service,[{computer_ip_address_port,{ComputerAddress,ComputerPort},
+%%%                                       {pod_ports,Min,Max},
 %%%                                       {dns_port,DnsPort}])),
-%%% 
-%%% ListofPods=[{pod,PodId,[IpAddr,Port]},,,]
+%%% PodList=[{ErlVmId,ErlVm,[IpAddr,Port]},,,]
 %%%
-%%% setPod(PodId,{IpAddr,Port})->ok|{error,[Error,,,]}
-%%% getPod(PodNode)-> {IpAddr,Port}|{error,[Error,,,]}
-%%% getAllActivePodAddresses()->[{IpAddr,Port},,,]
-%%% pod_info()->ListOfPods
+%%% create_pod(ErlVmId)->ok|{error,Err}
+%%% delete_pod(ErlVmId)->ok|{error,Err}
+%%% list_all_pods()->[{ErlVm,ErlVmId,{IpAddr,Port}}]
+%%% set_pod_ipaddr(ErlVmId,{IpAddr,Port})->ok|{error,[Error,,,]}
+%%% get_pod_ippaddr(ErlVmId)-> {IpAddr,Port}|{error,[Error,,,]}
 %%% 
 %%% LocalDnsList=[{ServiceId,IpAddr,Port}
 %%% setLocalDnsList(DnsList)->ok
@@ -37,22 +38,30 @@
 %% 
 %% --------------------------------------------------------------------
 -record(state,{computer_ip_address_port,
-	       pod_list, 
-	       dns_ip_address_port,
-	       dns_list
+	       min_vm_port_num,
+	       max_number_vms,
+	       list_vms,
+	       list_services
 	      }).
 
-
+-record(vm_info,{vm_id,
+		 node,
+		 ipaddress={}
+		}).
+	  
 	  
 %% --------------------------------------------------------------------
 
 %% ====================================================================
 %% External functions
 %% ====================================================================
-%%% create_pod({IpAddr,Port})->ok|{error,[Error,,,]}
-%%% delete_pod({IpAddr,Port})->ok|{error,[Error,,,]}
-%%% get_all_pod_addresses()->[{IpAddr,Port},,,]
-%%% get_pod_list()->ListOfPods
+%%%
+%%%
+%%% create_vm(ErlVmId,{IpAddr,Port})->ok|{error,Err}
+%%% delete_vm(ErlVmId)->ok|{error,Err}
+%%% list_all_vms()->[{ErlVm,ErlVmId,{IpAddr,Port}}]
+%%% set_vm_ipaddr(ErlVmId,{IpAddr,Port})->ok|{error,[Error,,,]}
+%%% get_vm_ippaddr(ErlVmId)-> {IpAddr,Port}|{error,[Error,,,]}
 %%% 
 %%% LocalDnsList=[{ServiceId,IpAddr,Port}
 %%% set_dns_list(DnsList)->ok
@@ -61,9 +70,9 @@
 
 -export([ping/0]).
 
--export([create_pod/1,delete_pod/1,
-	 get_all_pod_addresses/0,
-	 get_pod_list/0	 
+-export([create_vm/2,delete_vm/1,
+	 list_all_vms/0,
+	 get_vm_ippaddr/1
 	]).
 
 -export([set_dns_list/1,get_dns_list/0,
@@ -91,15 +100,15 @@ stop()-> gen_server:call(?MODULE, {stop},infinity).
 
 
 %%----------------------------------------------------------------------
-create_pod({IpAddr,Port})->
-    gen_server:call(?MODULE,{create_pod,{IpAddr,Port}},infinity).
-delete_pod({IpAddr,Port})->
-    gen_server:call(?MODULE,{delete_pod,{IpAddr,Port}},infinity).
+create_pod(ErlVmId,{IpAddr,Port})->
+    gen_server:call(?MODULE,{create_pod,ErlVmId,{IpAddr,Port}},infinity).
+delete_pod(ErlVmId)->
+    gen_server:call(?MODULE,{delete_pod,ErlVmId},infinity).
+get_pod_ippaddr(ErlVmId)->
+    gen_server:call(?MODULE,{get_pod_ippaddr,ErlVmId},infinity).
 
-get_all_pod_addresses()->
-    gen_server:call(?MODULE,{get_all_pod_addresses},infinity).
-get_pod_list()->
-    gen_server:call(?MODULE,{get_pod_list},infinity).
+list_all_pods()->
+    gen_server:call(?MODULE,{list_all_pods},infinity).
 get_dns_list()->
     gen_server:call(?MODULE,{get_dns_list},infinity).
 get_service_addresses(ServiceId)->
@@ -128,12 +137,12 @@ set_dns_list(DnsList)->
 %%          {stop, Reason}
 %
 %% --------------------------------------------------------------------
-init([]) ->
-    {ok,{ComputerAddress,ComputerPort}}=application:get_env(computer_ip_address_port),
-    {ok,{DnsPort}}=application:get_env(computer_ip_address_port),
+init([{ComputerAddress,ComputerPort},{MinPort,MaxPort},
+      {DnsAddress,DnsPort}]) ->
+    PodList=lib_computer:create_vm_list(ComputerAddress,MinPort,MaxPort)
     
     {ok, #state{computer_ip_address_port={ComputerAddress,ComputerPort},
-		pod_list=[], 
+		vm_list=[], 
 		dns_ip_address_port={"localhost",DnsPort},
 		dns_list=[]}}.
 
@@ -151,17 +160,17 @@ handle_call({ping}, _From, State) ->
     Reply={pong,node(),?MODULE},
     {reply, Reply, State};
 
-handle_call({create_pod,{IpAddr,Port}}, _From, State) ->
+handle_call({create_pod,ErlVmId,{IpAddr,Port}}, _From, State) ->
     Reply={IpAddr,Port},
     {reply, Reply, State};
-handle_call({delete_pod,{IpAddr,Port}}, _From, State) ->
-    Reply={IpAddr,Port},
+handle_call({delete_pod,ErlVmId}, _From, State) ->
+    Reply=ErlVmId,
     {reply, Reply, State};
-handle_call({get_all_pod_addresses}, _From, State) ->
+handle_call({list_all_pods}, _From, State) ->
      Reply=glurk,
     {reply, Reply, State};
 
-handle_call({get_pod_list}, _From, State) ->
+handle_call({get_pod_ippaddr,ErlVmId}, _From, State) ->
       Reply=glurk,
     {reply, Reply, State};
 

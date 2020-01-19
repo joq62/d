@@ -120,11 +120,10 @@ heart_beat(Interval)->
 %% --------------------------------------------------------------------
 init([]) ->
        % Initiated the app
-    {ok,{DnsIpAddr,DnsPort}}=application:get_env(dns_ip_address_port),
-
+   
     ok=log:init_logfile(),	
        
-    {ok, #state{dns_address={DnsIpAddr,DnsPort}}}.
+    {ok, #state{}}.
     
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
