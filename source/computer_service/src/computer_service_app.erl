@@ -44,10 +44,13 @@
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 start(_Type, _StartArgs) ->
-    {ok,{ComputerAddress,ComputerPort}}=application:get_env(computer_ip_address_port),
-    {ok,{DnsAddress,DnsPort}}=application:get_env(dns_ip_address_port),
-    Args=[{ComputerAddress,ComputerPort},
-	  {DnsAddress,DnsPort}],
+    {ok,{ComputerIpAddr,ComputerPort}}=application:get_env(computer_ip_address_port),
+    {ok,MinVmPort}=application:get_env(min_vm_port),
+    {ok,MaxVmPort}=application:get_env(max_vm_port),
+    {ok,Type}=application:get_env(type),
+    {ok,Source}=application:get_env(source),
+    Args=[{ComputerIpAddr,ComputerPort},{MinVmPort,MaxVmPort},
+	  {Type,Source}],
 
     {ok,Pid}= computer_service_sup:start(Args),
     {ok,Pid}.

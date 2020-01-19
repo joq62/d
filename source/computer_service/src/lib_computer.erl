@@ -9,18 +9,18 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--define(SOURCE_PATH,"/home/pi/erlang/d/source").
-
 
 %% --------------------------------------------------------------------
+-define(FILES_KEEP,["computer_service","Makefile","log_file",
+		       "src","ebin","test_src","test_ebin"]).
 
-
+-define(SERVICES_2_PRELOAD,["tcp_service","log_service",
+			    "local_dns_service"]).
 %% External exports
 
--export([create_pod/2,
-	       
-	 create/4,delete/1]).
+%-export([boot/6]).
 
+-compile(export_all).
 
 %% ====================================================================
 %% External functions
@@ -31,17 +31,11 @@
 %% Description:
 %% Returns: non
 %% --------------------------------------------------------------------
-create_vm_list(ComputerAddress,MinPort,MaxPort)->
-    %% Port is the erlang node ID
-
-create_vm(VmId,Port)->
-    % Create a vm directory to load services 
-    % Load tcp_services and start tcp_server to listen on port Port
-    % Load pod service 
-    % Load and start a service 
-    
-    
-
+boot({ComputerIpAddr,ComputerPort},VmMinPort,VmMaxPort,Type,Source)->
+    {ok,_}=scratch(?FILES_KEEP),
+    {ok,VmStartInfo}=start_vms(VmMinPort,VmMaxPort-VmMinPort,[]),
+ %   {ok,Result}=load_start_services(?SERVICES_2_PRELOAD,[]),
+    VmStartInfo.
 
 
 %% --------------------------------------------------------------------
@@ -49,175 +43,59 @@ create_vm(VmId,Port)->
 %% Description:
 %% Returns: non
 %% --------------------------------------------------------------------
-start(ServiceId,Type,Source,{DnsIpAddr,DnsPort})->
-    create(ServiceId,Type,Source,[{dns_ip_address_port,{DnsIpAddr,DnsPort}}]).
+load_start_services(Vm,Type,Source,DestinationDir,EnvVariables)->
+    load_start_services(?SERVICES_2_PRELOAD,
+			Vm,Type,Source,DestinationDir,EnvVariables,
+			[]).
+load_start_services([],_Vm,_Type,_Source,_DestinationDir,_EnvVariables,Result)->
+    Result;
+load_start_services([ServiceId|T],Vm,Type,Source,DestinationDir,EnvVariables,Acc) ->
+    R=service_handler:start(Vm,ServiceId,Type,Source,DestinationDir,EnvVariables),
+    ok.
 
-stop(ServiceId)->
-    delete(ServiceId).
+
 %% --------------------------------------------------------------------
-%% Function:clone_compile(Service,BoardNode)
+%% Function:init 
 %% Description:
-%% Returns: ok|{erro,compile_info}|{error,nodedown}
+%% Returns: non
 %% --------------------------------------------------------------------
-delete(ServiceId)->
-    Result=case rpc:call(node(),application,stop,[list_to_atom(ServiceId)],10000) of
-	       ok->
-		   PathServiceEbin=filename:join([ServiceId,"ebin"]),
-		   case rpc:call(node(),code,del_path,[PathServiceEbin]) of
-		       true->
-			   case rpc:call(node(),os,cmd,["rm -rf "++ServiceId]) of
-			       []->
-				   ok;
-			       Err ->
-				   {error,[undefined_error,ServiceId,Err,?MODULE,?LINE]}
-			   end;
-		       false->
-			   {error,[directory_not_found,ServiceId,?MODULE,?LINE]};
-		       {error,Err}->
-			   {error,[ServiceId,Err,?MODULE,?LINE]};
-		       {badrpc,Err} ->
-			   {error,[badrpc,ServiceId,Err,?MODULE,?LINE]};
-		       Err ->
-			   {error,[undefined_error,ServiceId,Err,?MODULE,?LINE]}
-		   end;
-	       {error,{not_started,Err}}->
-		   {error,[eexists,ServiceId,Err,?MODULE,?LINE]};
-	       {badrpc,Err} ->
-		   {error,[badrpc,ServiceId,Err,?MODULE,?LINE]};
-	       Err ->
-		   {error,[undefined_error,ServiceId,Err,?MODULE,?LINE]}
-	   end,
-    Result.
-
+start_vms(_VmMinPort,-1,VmList)->
+    {ok,VmList};
+start_vms(VmMinPort,N,Acc) ->
+    Port=N+VmMinPort,
+    VmId=integer_to_list(Port)++"_vm",
+    Vm=vm_handler:create(VmId),
+    NewAcc=[{VmId,Vm,Port}|Acc],
+    start_vms(VmMinPort,N-1,NewAcc).
 %% --------------------------------------------------------------------
-%% Function:clone_compile(Service,BoardNode)
+%% Function:init 
 %% Description:
-%% Returns: ok|{erro,compile_info}|{error,nodedown}
-%%
-%% PodId/Service
-%%
-%%
+%% Returns: non
 %% --------------------------------------------------------------------
-create(ServiceId,Type,Source,EnvList)->
-    Result =case filelib:is_dir(ServiceId) of
-		true->
-		    {error,[service_already_loaded,ServiceId,?MODULE,?LINE]};
-		false ->
-		    case load_code(ServiceId,Type,Source) of
-			{error,Err}->
-		    {error,Err};
-			ok ->
-			    case compile(ServiceId) of
-				{error,Err}->
-				    {error,Err};
-				ok ->
-				    %timer:sleep(10000),
-				    case start_app(ServiceId,EnvList) of
-					{error,Err}->
-					    {error,Err};
-					ok->
-					    {ok,ServiceId}
-				    end
-			    end
-		    end
-	    end,
-    timer:sleep(2000),
-    Result.
-    
-
 
 %% --------------------------------------------------------------------
-%% Function:clone_compile(Service,BoardNode)
+%% Function:init 
 %% Description:
-%% Returns: ok|{erro,compile_info}|{error,nodedown}
+%% Returns: non
 %% --------------------------------------------------------------------
-load_code(ServiceId,github,UrlToSource)->
-    FileName=ServiceId++".git",
-    UrlToService=UrlToSource++"/"++FileName,
-    os:cmd("git clone "++UrlToService),
-    ok;
+scratch()->
+    scratch(?FILES_KEEP).
+scratch(FilesKeep)->
+    {ok,Files}=file:list_dir("."),
+    Result=[{File,os:cmd("rm -r "++File)}||File<-Files,
+			     false==lists:member(File,FilesKeep)],
+    {ok,Result}.
 
-load_code(ServiceId,dir,Path)->
-    PathToService=filename:join(Path,ServiceId),
-    Result=case filelib:is_dir(PathToService) of
-	       true->
-		   os:cmd("cp -r "++PathToService++" ."),
-		   ok;
-	       false->
-		   {error,['dir eexist',ServiceId,?MODULE,?LINE]}
-	   end,
-	       
-    Result.
 
 %% --------------------------------------------------------------------
-%% Function:clone_compile(Service,BoardNode)
+%% Function:init 
 %% Description:
-%% Returns: ok|{erro,compile_info}|{error,nodedown}
+%% Returns: non
 %% --------------------------------------------------------------------
-compile(ServiceId)->
-    PathSrc=filename:join([ServiceId,"src"]),
-    PathEbin=filename:join([ServiceId,"ebin"]),
-    
-    %Get erl files that shall be compiled
-    Result=case file:list_dir(PathSrc) of
-	       {ok,Files}->
-		   FilesToCompile=[filename:join(PathSrc,File)||File<-Files,filename:extension(File)==".erl"],
-		   % clean up ebin dir
-		   case rpc:call(node(),os,cmd,["rm -rf "++PathEbin++"/*"]) of
-		       []->
-			   CompileResult=[{rpc:call(node(),c,c,[ErlFile,[{outdir,PathEbin}]],5000),ErlFile}||ErlFile<-FilesToCompile],
-			   case [{R,File}||{R,File}<-CompileResult,error==R] of
-			       []->
-				   AppFileSrc=filename:join(PathSrc,ServiceId++".app"),
-				   AppFileDest=filename:join(PathEbin,ServiceId++".app"),
-				   case rpc:call(node(),os,cmd,["cp "++AppFileSrc++" "++AppFileDest]) of
-				       []->
-					 %  io:format("~p~n",[{AppFileSrc,AppFileDest,?FILE,?LINE}]),
-					   ok;
-				       {badrpc,Err} ->
-					   {error,[badrpc,ServiceId,Err,?MODULE,?LINE]};
-				       Err ->
-					   {error,[undefined_error,ServiceId,Err,?MODULE,?LINE]}
-				   end;
-			       CompilerErrors->
-				   {error,[compiler_error,CompilerErrors,?MODULE,?LINE]}
-			   end;
-		       {badrpc,Err} ->
-			   {error,[badrpc,ServiceId,Err,?MODULE,?LINE]};
-		       Err ->
-			   {error,[undefined_error,ServiceId,Err,?MODULE,?LINE]}
-		   end;
-	       {badrpc,Err} ->
-		   {error,[badrpc,ServiceId,Err,?MODULE,?LINE]};
-	       Err ->
-		   {error,[undefined_error,ServiceId,Err,?MODULE,?LINE]}
-	   end,
-    Result.
+
 
 %% --------------------------------------------------------------------
-%% Function:clone_compile(Service,BoardNode)
+%% Function:init 
 %% Description:
-%% Returns: ok|{erro,compile_info}|{error,nodedown}
+%% Returns: non
 %% --------------------------------------------------------------------
-start_app(ServiceId,EnvList)->
-    PathServiceEbin=filename:join([ServiceId,"ebin"]),
-    Result = case rpc:call(node(),code,add_path,[PathServiceEbin],5000) of
-		 true->
-		     Service=list_to_atom(ServiceId),
-		     ok=application:set_env([{Service,EnvList}]),
-		     case rpc:call(node(),application,start,[Service],5000) of
-			 ok->
-			     ok;
-			 {badrpc,Err} ->
-			     {error,[badrpc,ServiceId,Err,?MODULE,?LINE]};
-			 {error,{already_started,Service}}->
-			     ok;  % Needs to be checked 
-			 Err->
-			     {error,[undefined_error,ServiceId,Err,?MODULE,?LINE]}
-		     end;
-		 {badrpc,Err} ->
-		     {error,[badrpc,ServiceId,Err,?MODULE,?LINE]};
-		 Err ->
-		     {error,[undefined_error,ServiceId,Err,?MODULE,?LINE]}
-	     end,
-    Result.

@@ -44,14 +44,21 @@
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 start(_Type, _StartArgs) ->
-    {ok,{ComputerAddress,ComputerPort}}=application:get_env(computer_ip_address_port),
-    {ok,{DnsAddress,DnsPort}}=application:get_env(dns_ip_address_port),
-    Args=[{ComputerAddress,ComputerPort},
-	  {DnsAddress,DnsPort}],
+    {ok,{Ip,Port}}=application:get_env(computer_ip_address_port),
+    ComputerIpAddr=atom_to_list(Ip),
+    ComputerPort=list_to_integer(atom_to_list(Port)),
+    {ok,Min}=application:get_env(min_vm_port),
+    MinVmPort=list_to_integer(atom_to_list(Min)),
+    {ok,Max}=application:get_env(max_vm_port),
+    MaxVmPort=list_to_integer(atom_to_list(Max)),
+    {ok,Type}=application:get_env(type),
+    {ok,S}=application:get_env(source),
+    Source=atom_to_list(S),
+    
+    Args=[{ComputerIpAddr,ComputerPort},{MinVmPort,MaxVmPort},
+	  {Type,Source}],
 
-    {ok,Pid}= pod_service_sup:start(Args),
-    {ok,Pid}.
-    {ok,Pid}= computer_service_sup:start(),
+    {ok,Pid}= computer_service_sup:start(Args),
     {ok,Pid}.
 %% --------------------------------------------------------------------
 %% Func: stop/1
