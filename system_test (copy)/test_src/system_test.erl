@@ -74,7 +74,7 @@ ets_init(TestSpec)->
     Result=case file:consult(TestSpec) of
 	       {ok,I}->
 		   add(lists:keyfind(computers,1,I)),
-		   add(lists:keyfind(source,1,I)),
+		   add(lists:keyfind(lib_service,1,I)),
 		   add(lists:keyfind(apps,1,I)),
 		   add(lists:keyfind(test_files,1,I)),
 		   ok;
