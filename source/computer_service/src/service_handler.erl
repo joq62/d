@@ -120,10 +120,11 @@ load_code(ServiceId,ServiceDir,github,UrlToSource)->
 
 load_code(ServiceId,ServiceDir,dir,Path)->
     PathToService=filename:join(Path,ServiceId),
+   % glurk=ServiceDir,
     Result=case filelib:is_dir(PathToService) of
 	       true->
-		   ok=file:make_dir(ServiceId),
-		   []=os:cmd("cp -r "++PathToService++" "++ServiceId),
+	%	   ok=file:make_dir(ServiceDir),
+		   []=os:cmd("cp -r "++PathToService++" "++ServiceDir),
 		   ok;
 	       false->
 		   {error,['dir eexist',PathToService,?MODULE,?LINE]}

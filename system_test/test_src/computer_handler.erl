@@ -48,8 +48,9 @@ start()->
     computer_service:state_info(),
     [{computers,ComputerList}]=system_test:get(computers),
     [{source,{Type,Source}}]=system_test:get(source),
-      
- %   VmStartR=[start_vm_computer_service(NodeId,Node,IpAddr,Port,Type,Source,"computer_service")||{NodeId,Node,IpAddr,Port}<-ComputerList],
+    {pong,'40010_vm@asus',log_service}=tcp_service:call({"localhost",40010},{log_service,ping,[]}),
+    
+    VmStartR=[start_vm_computer_service(NodeId,Node,IpAddr,Port,Type,Source,"computer_service")||{NodeId,Node,IpAddr,Port}<-ComputerList],
     
   %  io:format("~p~n",[{VmStartR,?MODULE,?LINE}]),   
 

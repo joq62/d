@@ -137,13 +137,16 @@ init([{ComputerAddress,ComputerPort},{MinVmPort,MaxVmPort},
       {Type,Source}]) ->
     lib_computer:scratch(),
     %%-------- load_start for computer --------
-    TcpService={service_handler:start(node(),"tcp_service",Type,Source,"tcp_service",[]),
+   % TcpService={service_handler:start(node(),"tcp_service",Type,Source,"tcp_service",[]),
+%		"tcp_service",ComputerAddress,ComputerPort},
+
+    TcpService={service_handler:start(node(),"tcp_service",Type,Source,".",[]),
 		"tcp_service",ComputerAddress,ComputerPort},
     ok=rpc:call(node(),tcp_service,start_tcp_server,[ComputerAddress,ComputerPort,parallell]),
 		
-    LogService={service_handler:start(node(),"log_service",Type,Source,"log_service",[]),
+    LogService={service_handler:start(node(),"log_service",Type,Source,".",[]),
 		"log_service",ComputerAddress,ComputerPort},
-    LocalDnsService={service_handler:start(node(),"local_dns_service",Type,Source,"local_dns_service",[]),
+    LocalDnsService={service_handler:start(node(),"local_dns_service",Type,Source,".",[]),
 		     "local_dns_service",ComputerAddress,ComputerPort},
     
     %%-------- load_start vms  --------
