@@ -51,9 +51,10 @@ start(_Type, _StartArgs) ->
     {ok,Source}=application:get_env(source),
     Args=[{ComputerIpAddr,ComputerPort},{MinVmPort,MaxVmPort},
 	  {Type,Source}],
-
-    {ok,Pid}= computer_service_sup:start(Args),
-    {ok,Pid}.
+    io:format("~p~n",[{file:get_cwd(),?MODULE,?LINE}]),
+  %  {ok,Pid}= computer_service_sup:start(Args),
+  %  {ok,Pid}.
+    computer_service_sup:start(Args).
 %% --------------------------------------------------------------------
 %% Func: stop/1
 %% Returns: any

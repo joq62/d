@@ -1,3 +1,15 @@
+build_test:
+	rm -rf /home/pi/erlang/d/source/test_client/src/*~;
+	rm -rf /home/pi/erlang/d/source/test_client/ebin/*.beam;
+	rm -rf /home/pi/erlang/d/source/test_client/*.dump;
+	rm -rf /home/pi/erlang/d/source/test_client/test_ebin/*;
+	cp /home/pi/erlang/d/source/tcp_service/src/*.erl /home/pi/erlang/d/source/test_client/src;
+	cp /home/pi/erlang/d/source/tcp_service/src/*.app test_ebin;
+	cp /home/pi/erlang/d/source/include/*.hrl /home/pi/erlang/d/source/test_client/src;
+	cp /home/pi/erlang/d/source/test_client/src/*.app test_ebin;
+	erlc -o test_ebin /home/pi/erlang/d/source/test_client/src/*.erl;
+	erlc -o test_ebin /home/pi/erlang/d/source/test_client/test_src/*.erl;
+	erl -pa test_ebin -s local_test_client_test start -sname test_client
 local:
 	rm -rf computer_service test_src/*~ test_src/*.beam *.dump;
 	rm -rf test_ebin/* ebin/*;
