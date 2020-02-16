@@ -12,7 +12,7 @@
 -include("common_macros.hrl").
 
 %% --------------------------------------------------------------------
--define(GITHUB,"/home/pi/erlang/a/source").
+% -define(GITHUB,"/home/pi/erlang/a/source").
 
 %% External exports
 
@@ -154,8 +154,17 @@ clone(Pod,PodId,{ServiceId,Type,Source})->
 	       git->
 		   glurk_git_not_implmented;
 	       dir->
-		   Path=filename:join(Source,ServiceId),
-		   case rpc:call(Pod,os,cmd,["cp -r "++Path++" "++PodId]) of
+		   %% Clone Include
+		   case rpc:call(Pod,filelib,is_dir,[filename:join(PodId,"include")],5000) of
+		       true->
+			   ok;
+		       false->
+			   PathInclude=filename:join(Source,"include"),
+			   []=rpc:call(Pod,os,cmd,["cp -r "++PathInclude++" "++PodId])
+		   end,
+		   %% Clone service
+		   PathService=filename:join(Source,ServiceId),
+		   case rpc:call(Pod,os,cmd,["cp -r "++PathService++" "++PodId]) of
 		       []->
 			   case rpc:call(Pod,filelib,is_dir,[filename:join(PodId,ServiceId)],5000) of
 			       true->
@@ -173,6 +182,9 @@ clone(Pod,PodId,{ServiceId,Type,Source})->
 	   end,
     Result.
 
+
+
+
 %% --------------------------------------------------------------------
 %% Function:clone_compile(Service,BoardNode)
 %% Description:
@@ -181,22 +193,22 @@ clone(Pod,PodId,{ServiceId,Type,Source})->
 compile(Pod,PodId,ServiceId)->
     PathSrc=filename:join([PodId,ServiceId,"src"]),
     PathEbin=filename:join([PodId,ServiceId,"ebin"]),
-    PathTestSrc=filename:join([PodId,ServiceId,"test_src"]),
-    PathTestEbin=filename:join([PodId,ServiceId,"test_ebin"]),
-    
+ %   PathTestSrc=filename:join([PodId,ServiceId,"test_src"]),
+ %   PathTestEbin=filename:join([PodId,ServiceId,"test_ebin"]),
+    PathInclude=filename:join([PodId,"include"]),
     %Get erl files that shall be compiled
-    Result=do_compile(Pod,PodId,ServiceId,PathSrc,PathEbin),
-    do_compile(Pod,PodId,ServiceId,PathTestSrc,PathTestEbin),
+    Result=do_compile(Pod,PodId,ServiceId,PathSrc,PathEbin,PathInclude),
+ %   do_compile(Pod,PodId,ServiceId,PathTestSrc,PathTestEbin),
     Result.
 
-do_compile(Pod,PodId,ServiceId,PathSrc,PathEbin)->
+do_compile(Pod,PodId,ServiceId,PathSrc,PathEbin,PathInclude)->
     Result=case rpc:call(Pod,file,list_dir,[PathSrc]) of
 	       {ok,Files}->
 		   FilesToCompile=[filename:join(PathSrc,File)||File<-Files,filename:extension(File)==".erl"],
 		   % clean up ebin dir
 		   case rpc:call(Pod,os,cmd,["rm -rf "++PathEbin++"/*"]) of
 		       []->
-			   CompileResult=[{rpc:call(Pod,c,c,[ErlFile,[{outdir,PathEbin},{i,PathSrc},?COMPILER]],5000),ErlFile}||ErlFile<-FilesToCompile],
+			   CompileResult=[{rpc:call(Pod,c,c,[ErlFile,[{outdir,PathEbin},{i,PathInclude},?COMPILER]],5000),ErlFile}||ErlFile<-FilesToCompile],
 			   case [{R,File}||{R,File}<-CompileResult,error==R] of
 			       []->
 				   AppFileSrc=filename:join(PathSrc,ServiceId++".app"),

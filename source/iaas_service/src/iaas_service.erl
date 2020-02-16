@@ -26,8 +26,7 @@
 %% Key Data structures
 %% 
 %% --------------------------------------------------------------------
--record(state,{myip,dns_address,dns_socket,
-	       active,inactive}).
+-record(state,{active,inactive}).
 
 
 	  
@@ -155,17 +154,9 @@ check_boards(Interval)->
 %
 %% --------------------------------------------------------------------
 init([]) ->
-       % Initiated the app
-    {ok,[{MyIpAddr,MyPort},
-	 {DnsIpAddr,DnsPort},
-	 Socket
-	]}=misc_lib:app_start(?MODULE),
     iaas:init(),	
-    % spawn(fun()->do_poll(?POLL_INTERVAL) end),
     
-    {ok, #state{myip={MyIpAddr,MyPort},
-		dns_address={DnsIpAddr,DnsPort},
-		dns_socket=Socket}}.
+    {ok, #state{}}.
     
 %% --------------------------------------------------------------------
 %% Function: handle_call/3

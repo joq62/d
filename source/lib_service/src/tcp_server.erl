@@ -105,8 +105,12 @@ seq_server(IpAddr,Port,ClientPid)->
     Result.
 
 seq_loop(LSock)->
-    {ok,Socket}=gen_tcp:accept(LSock),
-    loop(Socket),
+    case gen_tcp:accept(LSock) of
+	{ok,Socket}->
+	    loop(Socket);
+	{error,_}->
+	    do_nothing
+    end,
     seq_loop(LSock).
 
 %% --------------------------------------------------------------------
@@ -139,9 +143,14 @@ par_server(IpAddr,Port,ClientPid)->
     Result.
 
 par_loop(LSock)->
-    {ok,Socket}=gen_tcp:accept(LSock),
-    spawn(fun()-> par_loop(LSock) end),
-    loop(Socket).
+    case gen_tcp:accept(LSock) of
+	{ok,Socket}->
+	    spawn(fun()-> par_loop(LSock) end),
+	    loop(Socket);
+	{error,_}->
+	    spawn(fun()-> par_loop(LSock) end)
+    end.	    
+    
 
 
 %% --------------------------------------------------------------------

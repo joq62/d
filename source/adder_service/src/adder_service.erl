@@ -17,7 +17,7 @@
 %% Key Data structures
 %% 
 %% --------------------------------------------------------------------
--record(state,{myip,dns_address,dns_socket}).
+-record(state,{}).
 
 %% Definitions 
 
@@ -85,8 +85,8 @@ heart_beat(Interval)->
 %
 %% --------------------------------------------------------------------
 init([]) ->
-    {ok,{DnsIpAddr,DnsPort}}=application:get_env(dns_ip_address_port),
-    {ok, #state{dns_address={DnsIpAddr,DnsPort}}}.
+   
+    {ok, #state{}}.
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
 %% Description: Handling call messages
@@ -111,7 +111,6 @@ handle_call({add,A,B}, _From, State) ->
 
 
 handle_call({stop}, _From, State) ->
-    tcp_client:disconnect(State#state.dns_socket),
     {stop, normal, shutdown_ok, State};
 
 handle_call(Request, From, State) ->
@@ -125,11 +124,8 @@ handle_call(Request, From, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_cast({heart_beat,Interval}, State) ->
-    {MyIpAddr,MyPort}=State#state.myip,
-    tcp_client:cast(State#state.dns_socket,{dns_service,add,[atom_to_list(?MODULE),MyIpAddr,MyPort,node()]}),
-    
-    spawn(fun()->h_beat(Interval) end),      
+handle_cast({heart_beat,_Interval}, State) ->
+    ok,  
     {noreply, State};
 
 handle_cast(Msg, State) ->
