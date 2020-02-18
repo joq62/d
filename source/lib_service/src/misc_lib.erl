@@ -15,7 +15,8 @@
 %% --------------------------------------------------------------------
 
 %% External exports
--export([get_node_by_id/1,get_vm_id/0,get_vm_id/1,
+-export([unconsult/2,
+	 get_node_by_id/1,get_vm_id/0,get_vm_id/1,
 	 app_start/1
 	]).
 	 
@@ -25,6 +26,11 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
+unconsult(File, L) ->
+    {ok, S} = file:open(File, write),
+    lists:foreach(fun(X) -> io:format(S, "~p.~n",[X]) end, L),
+    file:close(S).
+
 %% --------------------------------------------------------------------
 %% Function: 
 %% Description:

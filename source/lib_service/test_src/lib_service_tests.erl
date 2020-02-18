@@ -34,6 +34,7 @@ cases_test()->
      lib_service_test_cases:misc_lib(),
      lib_service_test_cases:pod_container_cases(),
      lib_service_test_cases:tcp_service(),
+     lib_service_test_cases:unconsult(),
      % cleanup and stop eunit 
      clean_stop(),
      eunit_stop()].
@@ -50,6 +51,7 @@ start()->
 
 
 clean_start()->
+    file:delete("computer_1.config"),
     pod:delete(node(),"pod_lib_1"),
     pod:delete(node(),"pod_lib_2"),
     pod:delete(node(),"pod_master").

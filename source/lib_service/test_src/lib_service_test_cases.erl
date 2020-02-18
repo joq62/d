@@ -35,6 +35,28 @@ node_by_id()->
     PodServer=list_to_atom(PodIdServer),
     ?assertEqual(PodServer,misc_lib:get_node_by_id(?SERVER_ID)).
 
+
+unconsult()->
+    L=[{vm_name,"pod_computer_1"},
+       {vm,'pod_computer_1@asus'},
+       {ip_addr,"localhost"},
+       {port,40100},
+       {mode,parallell},
+       {worker_start_port,40101},
+       {num_workers,5}],
+    misc_lib:unconsult("computer_1.config",L),
+    ?assertEqual({ok,[{vm_name,"pod_computer_1"},
+		      {vm,'pod_computer_1@asus'},
+		      {ip_addr,"localhost"},
+		      {port,40100},
+		      {mode,parallell},
+		      {worker_start_port,40101},
+		      {num_workers,5}]},file:consult("computer_1.config")),
+    file:delete("computer_1.config"),
+    ok.
+
+
+
 %------------------ ceate and delete Pods and containers -------
 % create Pod, start container - test application running - delete container
 % delete Pod
