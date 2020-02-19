@@ -1,0 +1,21 @@
+all:
+	rm -rf ebin/* src/*~;
+	rm -rf computer_service tcp_service pod_service;
+#	git clone https://github.com/joq62/computer_service.git;
+#	erlc -o computer_service/ebin computer_service/src/*.erl;
+#	cp computer_service/src/*.app computer_service/ebin;
+	git clone https://github.com/joq62/pod_service.git;
+	erlc -o pod_service/ebin pod_service/src/*.erl;
+	cp pod_service/src/*.app pod_service/ebin;
+	git clone https://github.com/joq62/tcp_service.git;
+	erlc -o tcp_service/ebin tcp_service/src/*.erl;
+	cp tcp_service/src/*.app tcp_service/ebin;
+	erlc -o ebin src/*.erl;
+	erl -pa ebin -s boot start localhost 20 dir /home/pi/erlang/d/source -sname boot
+
+local:
+	rm -rf ebin/* src/*~ test_ebin/* test_src/*~;
+	erlc -o ebin src/*.erl;
+	erlc -o test_ebin test_src/*.erl;
+#	cp src/*.app ebin;
+	erl -pa ebin -pa test_ebin -s local_boot_service_test test -sname local_boot_test

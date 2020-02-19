@@ -22,6 +22,30 @@
 %% ====================================================================
 
 %% --------------------------------------------------------------------
+%% Function:emulate loader
+%% Description: requires pod+container module
+%% Returns: non
+%% --------------------------------------------------------------------
+% Data structures 
+% ComputerName: computer_1..
+% IpAddr,Port
+% Mode
+% WorkerStartPort 
+% NumWorkers
+% Source  {dir, Path
+% Files to load
+%
+
+emulate_boot_service()->
+    % scratch the computer
+    % read config file-> computer_name.config 
+    % start tcp_server
+    % start computer pod
+    % load [lib_service,computer_service,log_service,local_dns_service]
+    % 
+    % exit 
+    
+%% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
