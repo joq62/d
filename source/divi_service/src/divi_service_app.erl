@@ -3,7 +3,7 @@
 %% Description: TODO: Add description to application_org
 -module(divi_service_app).
 
--behaviour(application). 
+-behaviour(application).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
@@ -44,9 +44,9 @@
 %%          {error, Reason}
 %% --------------------------------------------------------------------
 start(_Type, _StartArgs) ->
-    {ok,Pid}= divi_service_sup:start_link(),
-    {ok,Pid}.
-   
+   % {ok,Pid}= divi_service_sup:start_link(),
+   % {ok,Pid}.
+    divi_service_sup:start_link().
 %% --------------------------------------------------------------------
 %% Func: stop/1
 %% Returns: any

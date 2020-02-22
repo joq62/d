@@ -5,7 +5,6 @@
 %%% Created : 10 dec 2012
 %%% -------------------------------------------------------------------
 -module(container). 
- 
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
@@ -16,7 +15,8 @@
 
 %% External exports
 
--export([create/3,delete/3]).
+-export([create/2,create/3,
+	 delete/2,delete/3]).
 
 
 %% ====================================================================
@@ -32,6 +32,8 @@
 %% Description:
 %% Returns: ok|{erro,compile_info}|{error,nodedown}
 %% --------------------------------------------------------------------
+delete(PodId,ServiceList)->
+    delete(node(),PodId,ServiceList).
 delete(Pod,PodId,ServiceList)->
     delete_container(Pod,PodId,ServiceList,[]).
 
@@ -82,6 +84,9 @@ d_container(Pod,PodId,ServiceId)->
 %%
 %%
 %% --------------------------------------------------------------------
+create(PodId,ServiceList)->
+    create(node(),PodId,ServiceList).  
+
 create(Pod,PodId,ServiceList)->
     R=create_container(Pod,PodId,ServiceList,[]),
     case [{error,Err}||{error,Err}<-R] of

@@ -133,38 +133,36 @@ set_dns_list(DnsList)->
 %%          {stop, Reason}
 %
 %% --------------------------------------------------------------------
-init([{ComputerAddress,ComputerPort},{MinVmPort,MaxVmPort},
-      {Type,Source}]) ->
-    lib_computer:scratch(),
-    %%-------- load_start for computer --------
-   % TcpService={service_handler:start(node(),"tcp_service",Type,Source,"tcp_service",[]),
-%		"tcp_service",ComputerAddress,ComputerPort},
+init([]) ->
+    %%- Retreive config file
+    {ok,Files}=file:list_dir("."),    
+    case [File||File<-Files,filename:extension(File)=:=".config"] of
+	[File]->
+	    {ok,[{vm_name,VmName},
+		 {vm,Vm},
+		 {ip_addr,ComputerIpAddr},
+		 {port,ComputerPort},
+		 {mode,Mode},
+		 {worker_start_port,WorkerStartPort},
+		 {num_workers,NumWorkers},
+		 {source,Source},
+		 {services_to_load,ServicesToLoad},
+		 {files_to_keep,_},
+		 {master_dns,DnsIpAddrAndPort}]}=file:consult(File);
+	_ ->
+	    {error,[no_config_file]}
+    end,
+    %% start needed services
+    [container:create(Vm,VmName,[{{service,Service},Source}])||Service<-ServiceToLoad],
 
-    TcpService={service_handler:start(node(),"tcp_service",Type,Source,".",[]),
-		"tcp_service",ComputerAddress,ComputerPort},
-    ok=rpc:call(node(),tcp_service,start_tcp_server,[ComputerAddress,ComputerPort,parallell]),
-		
-    LogService={service_handler:start(node(),"log_service",Type,Source,".",[]),
-		"log_service",ComputerAddress,ComputerPort},
-    LocalDnsService={service_handler:start(node(),"local_dns_service",Type,Source,".",[]),
-		     "local_dns_service",ComputerAddress,ComputerPort},
+    %% Start tcp server
+    ok=lib_service:start_tcp_server(ComputerIpAddr,ComputerPort,Mode),
     
-    %%-------- load_start vms  --------
-    {ok,VmStartInfo}=lib_computer:start_vms(MinVmPort,MaxVmPort-MinVmPort,[]),
-    TcpServiceList=[{service_handler:start(Vm,"tcp_service",Type,Source,VmId,[]),"tcp_service",ComputerAddress,Port}||{VmId,Vm,Port}<-VmStartInfo],
-    TcpStart=[{rpc:call(Vm,tcp_service,start_tcp_server,[ComputerAddress,Port,parallell]),"tcp_service",Vm,ComputerAddress,Port}||{_VmId,Vm,Port}<-VmStartInfo],
-    io:format(" ~p~n",[{?MODULE,?LINE}]),
-    LogServiceList=[{service_handler:start(Vm,"log_service",Type,Source,VmId,[]),"log_service",ComputerAddress,Port}||{VmId,Vm,Port}<-VmStartInfo],
-     io:format(" ~p~n",[{?MODULE,?LINE}]),
-    LocalDnsServiceList=[{service_handler:start(Vm,"local_dns_service",Type,Source,VmId,[]),"local_dns_service",ComputerAddress,Port}||{VmId,Vm,Port}<-VmStartInfo],
-    io:format(" ~p~n",[{?MODULE,?LINE}]),
+    lib_computer:start_workers(ComputerIpAddr,WorkerStartPort,NumWorkers,Mode,Source)
+	    
+
     
-    L=lists:append([[TcpService],TcpServiceList,[LogService],LogServiceList,[LocalDnsService],LocalDnsServiceList]),
-  %  io:format("L = ~p~n",[{L,?MODULE,?LINE}]),
- %   ListOfService=lists:append([[TcpService],TcpServiceList,[LogService],LogServiceList,[LocalDnsService],LocalDnsServiceList]),
-    ListOfService=[{ServiceId,IpAddr,Port}||{ok,ServiceId,IpAddr,Port}<-L],
-    
-    {ok, #state{computer_ip_address_port={ComputerAddress,ComputerPort},
+    {ok, #state{computer_ip_address_port={ComputerIpAddr,ComputerPort},
 		min_vm_port=MinVmPort,
 		max_vm_port=MaxVmPort,
 		type=Type,

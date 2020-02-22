@@ -69,7 +69,8 @@ get(ServiceId)->
 	      []->
 		  [];
 	      Info ->
-		  Info
+		  [{IpAddr,Port,Vm}||[IpAddr,Port,Vm]<-Info]
+		  
 	  end,
     Result.
 
